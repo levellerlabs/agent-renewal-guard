@@ -10,10 +10,9 @@ Two tool tiers:
   human-gated tool - record_decision (approval surface only; documented, not exposed
                      to the advising agent in the recommended config)
 
-Spec: MCP 2025-03-26 wire protocol via official mcp SDK 1.29.1 (Streamable HTTP,
-stateless mode). The SDK advertises protocol version 2025-03-26 and negotiates
-per the spec; server meets the hackathon minimum of spec 2025-11-25 capabilities
-via Streamable HTTP transport with tool capability.
+Spec: MCP 2025-11-25 (the hackathon-required minimum) negotiated over Streamable
+HTTP via the official mcp SDK 1.29.1, stateless mode. Verified live: initialize
+returns protocolVersion 2025-11-25.
 """
 from __future__ import annotations
 

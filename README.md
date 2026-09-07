@@ -18,7 +18,9 @@ do not want a voice agent holding your wallet. This server gives the agent eyes
 ## What it is
 
 - A single-file Python MCP server (`server.py`) built on the official `mcp` SDK
-  (v1.29.1, Streamable HTTP transport, stateless mode).
+  (v1.29.1, Streamable HTTP transport, stateless mode). Negotiates MCP protocol
+  version 2025-11-25 over Streamable HTTP (verified live: initialize returns
+  protocolVersion 2025-11-25).
 - Tools are split into two privilege tiers so an Alexa+ orchestrator can be configured
   least-privilege:
   - `list_upcoming_renewals` (read-only): renewals inside a decision window with
@@ -57,7 +59,7 @@ Or a raw Streamable HTTP POST:
 ```bash
 curl -s http://localhost:8787/mcp -H 'Content-Type: application/json' \
   -H 'Accept: application/json, text/event-stream' \
-  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"curl","version":"0"}}}'
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"curl","version":"0"}}}'
 ```
 
 Then list tools:
