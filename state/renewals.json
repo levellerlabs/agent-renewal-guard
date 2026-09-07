@@ -1,0 +1,65 @@
+{
+  "renewals": [
+    {
+      "id": "gym-flex",
+      "service": "FlexFitness Monthly",
+      "category": "fitness",
+      "amount": 32.99,
+      "cadence": "monthly",
+      "next_renewal": "2026-09-12",
+      "auto_renews": true,
+      "utilisation_note": "visited twice since March",
+      "last_used": "2026-03-14",
+      "status": "active"
+    },
+    {
+      "id": "cloud-2tb",
+      "service": "NimbusDrive 2TB",
+      "category": "storage",
+      "amount": 9.99,
+      "cadence": "monthly",
+      "next_renewal": "2026-09-10",
+      "auto_renews": true,
+      "utilisation_note": "180GB of 2TB used",
+      "last_used": "2026-09-05",
+      "status": "active"
+    },
+    {
+      "id": "stream-family",
+      "service": "StreamNow Family",
+      "category": "entertainment",
+      "amount": 17.99,
+      "cadence": "monthly",
+      "next_renewal": "2026-09-21",
+      "auto_renews": true,
+      "utilisation_note": "kids moved out in June",
+      "last_used": "2026-08-30",
+      "status": "active",
+      "cancelled_proposal": "prop_df3769352d"
+    },
+    {
+      "id": "domain-portfolio",
+      "service": "NameShack Domains",
+      "category": "business",
+      "amount": 96.0,
+      "cadence": "yearly",
+      "next_renewal": "2026-10-02",
+      "auto_renews": true,
+      "utilisation_note": "6 of 8 domains parked, 2 in use",
+      "last_used": "2026-09-01",
+      "status": "active"
+    },
+    {
+      "id": "music-solo",
+      "service": "TuneVault Premium",
+      "category": "entertainment",
+      "amount": 11.99,
+      "cadence": "monthly",
+      "next_renewal": "2026-09-09",
+      "auto_renews": true,
+      "utilisation_note": "used daily on commute",
+      "last_used": "2026-09-07",
+      "status": "active"
+    }
+  ]
+}
