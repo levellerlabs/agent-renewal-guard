@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Renewal Guard - simulated Alexa+ console</title>
+<style>
+  :root{
+    --paper:#faf7f0; --ink:#26221c; --faint:#8a8378; --line:#d8d2c4;
+    --accent:#3d6b4f; --warn:#a05c2c; --bad:#8c3b2e; --card:#fffdf8;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Georgia,'Times New Roman',serif;background:var(--paper);color:var(--ink);line-height:1.45}
+  header{border-bottom:2px solid var(--ink);padding:14px 22px 10px;display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px}
+  header h1{font-size:21px;margin:0;letter-spacing:.3px}
+  header .sub{color:var(--faint);font-size:13px;font-style:italic}
+  .wrap{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:18px 22px;max-width:1180px;margin:0 auto}
+  @media(max-width:900px){.wrap{grid-template-columns:1fr}}
+  .pane{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:14px 16px}
+  .pane h2{font-size:15px;margin:0 0 2px;text-transform:uppercase;letter-spacing:1.2px;font-family:'Courier New',monospace}
+  .pane .who{color:var(--faint);font-size:12px;margin-bottom:10px;font-style:italic}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  button{font-family:'Courier New',monospace;font-size:13px;padding:7px 12px;border:1px solid var(--ink);background:var(--paper);cursor:pointer;border-radius:3px}
+  button:hover{background:var(--ink);color:var(--paper)}
+  button:disabled{opacity:.45;cursor:default}
+  .note{font-size:12px;color:var(--faint);margin:6px 0 0}
+  .log{margin-top:8px}
+  .msg{border-left:3px solid var(--line);padding:6px 10px;margin:8px 0;background:var(--paper)}
+  .msg.agent{border-color:var(--accent)}
+  .msg.human{border-color:var(--warn)}
+  .msg.sys{border-color:var(--faint);color:var(--faint);font-style:italic}
+  .msg .says{font-size:14px}
+  .msg .meta{font-family:'Courier New',monospace;font-size:11px;color:var(--faint);margin-top:3px;word-break:break-all}
+  .msg .meta code{background:transparent}
+  .tray-card{border:1px solid var(--line);border-radius:4px;padding:10px 12px;margin:10px 0;background:var(--paper)}
+  .tray-card .svc{font-weight:bold;font-size:15px}
+  .tray-card .rec{font-family:'Courier New',monospace;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin:2px 0}
+  .rec.cancel{color:var(--bad)} .rec.downgrade{color:var(--warn)} .rec.keep,.rec.switch{color:var(--accent)}
+  .tray-card ul{margin:6px 0 8px 18px;padding:0;font-size:13px}
+  .tray-card .impact{font-size:12px;color:var(--faint)}
+  .tray-card .actions{display:flex;gap:8px;margin-top:8px}
+  .tray-card.decided{opacity:.6}
+  .badge{display:inline-block;font-family:'Courier New',monospace;font-size:10px;border:1px solid var(--faint);border-radius:9px;padding:1px 7px;color:var(--faint);margin-left:6px;vertical-align:middle}
+  .statusbar{font-family:'Courier New',monospace;font-size:11px;color:var(--faint);padding:0 22px 14px;max-width:1180px;margin:0 auto}
+  .denied{border:1px dashed var(--bad);padding:10px 12px;margin:10px 0;color:var(--bad);font-size:13px;background:#f7ece8;border-radius:4px}
+  .okline{color:var(--accent);font-size:13px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Agent Renewal Guard</h1>
+  <div class="sub">simulated Alexa+ console &nbsp;|&nbsp; MCP server: localhost:8787/mcp &nbsp;|&nbsp; protocol <span id="proto">-</span></ negotiated live</div>
+</header>
+
+<div class="wrap">
+  <section class="pane" id="agent-pane">
+    <h2>Voice briefing</h2>
+    <div class="who">the advising agent - holds 4 tools, never record_decision</div>
+    <div class="btns">
+      <button id="btn-brief">Run morning briefing</button>
+      <button id="btn-rail">Try to approve (guardrail)</button>
+    </div>
+    <div class="log" id="agent-log"><div class="msg sys">Waiting. The agent speaks only when asked.</div></div>
+  </section>
+
+  <section class="pane" id="tray-pane">
+    <h2>Approval tray</h2>
+    <div class="who">the human side - the only surface holding record_decision</div>
+    <div id="tray"><div class="note">No proposals yet. Run the briefing first.</div></div>
+    <div id="tray-msg"></div>
+  </section>
+</div>
+
+<div class="statusbar" id="statusbar">idle</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const log=(pane,says,meta,cls='agent')=>{
+  const d=document.createElement('div');d.className='msg '+cls;
+  d.innerHTML='<div class="says"></div>'+(meta?'<div class="meta"></div>':'');
+  d.querySelector('.says').textContent=says;
+  if(meta)d.querySelector('.meta').textContent=meta;
+  $(pane).appendChild(d);d.scrollIntoView({block:'nearest'});
+};
+const bar=t=>{$('statusbar').textContent=t};
+let lastBrief=null;
+
+async function briefing(){
+  $('agent-log').innerHTML='';bar('running briefing against the live MCP server...');
+  log('agent-log','[connecting] initialize (protocol 2025-11-25) -> tools/list','client: alexa-sim-voice-agent','sys');
+  const r=await fetch('/api/briefing',{method:'POST'});
+  const data=await r.json();
+  lastBrief=data;
+  $('proto').textContent=data.protocol||'?';
+  log('agent-log','[session] protocol '+data.protocol+' - tools granted to this client: '+data.tools_granted.join(', '),'least privilege: record_decision NOT granted','sys');
+  let delay=350;
+  data.flow.steps.forEach((st,i)=>{
+    setTimeout(()=>log('agent-log',st.says,'-> '+st.tool+'('+JSON.stringify(st.args)+')',i===0?'sys':'agent'),delay);
+    delay+=420;
+  });
+  setTimeout(()=>{bar('briefing complete - proposals waiting in the tray');renderTray();},delay+150);
+}
+
+async function guardrail(){
+  bar('agent attempting to approve a proposal itself...');
+  log('agent-log','[user asks] "just cancel the gym one for me"','spoken request','human');
+  const r=await fetch('/api/guardrail',{method:'POST'});
+  const d=await r.json();
+  const a=d.attempt;
+  setTimeout(()=>{
+    const box=document.createElement('div');box.className='denied';
+    box.textContent='DENIED - '+a.tool+'('+JSON.stringify(a.args)+') - '+a.reason;
+    $('agent-log').appendChild(box);
+    log('agent-log','I cannot do that. Approval is yours. The proposal is in your tray - say yes there and it is done.','guardrail held','agent');
+    bar('guardrail held: the agent cannot approve, pay or cancel anything');
+  },500);
+}
+
+async function renderTray(){
+  const r=await fetch('/api/state');const d=await r.json();
+  const pend=(d.proposals||[]).filter(p=>p.status==='pending');
+  const other=(d.proposals||[]).filter(p=>p.status!=='pending');
+  const el=$('tray');el.innerHTML='';
+  if(!pend.length&&!other.length){el.innerHTML='<div class="note">No proposals yet. Run the briefing first.</div>';return}
+  pend.forEach(p=>el.appendChild(card(p,true)));
+  other.slice(-4).forEach(p=>el.appendChild(card(p,false)));
+}
+function card(p,active){
+  const d=document.createElement('div');d.className='tray-card'+(active?'':' decided');
+  const impact=p.estimated_annual_impact_gbp?(' saves about £'+p.estimated_annual_impact_gbp+'/yr'):'';
+  d.innerHTML='<div class="svc"></div><div class="rec '+p.recommendation+'"></div><ul></ul><div class="impact"></div><div class="actions"></div>';
+  d.querySelector('.svc').textContent=p.service+(active?'':' - '+p.status);
+  d.querySelector('.rec').textContent='recommend: '+p.recommendation;
+  const ul=d.querySelector('ul');(p.reasons||[]).forEach(rr=>{const li=document.createElement('li');li.textContent=rr;ul.appendChild(li)});
+  d.querySelector('.impact').textContent=impact;
+  if(active){
+    const yes=document.createElement('button');yes.textContent='Approve';
+    const no=document.createElement('button');no.textContent='Reject';
+    yes.onclick=()=>decide(p.id,'approved');no.onclick=()=>decide(p.id,'rejected');
+    const a=d.querySelector('.actions');a.appendChild(yes);a.appendChild(no);
+  }
+  return d;
+}
+async function decide(id,dec){
+  bar('recording human decision via record_decision...');
+  const r=await fetch('/api/decide',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({proposal_id:id,decision:dec})});
+  const d=await r.json();
+  if(d.ok){
+    log('agent-log','[tray] human '+(dec==='approved'?'APPROVED':'REJECTED')+' a proposal. '+(dec==='approved'?'Ledger updated - the renewal leaves the decision window.':'No change made.'),'record_decision - client: approval-tray-surface','sys');
+    bar('decision recorded: '+dec);
+  }else{
+    log('agent-log','[tray] decision failed: '+JSON.stringify(d.decision_result),'','sys');
+    bar('decision failed');
+  }
+  renderTray();
+}
+
+$('btn-brief').onclick=briefing;
+$('btn-rail').onclick=guardrail;
+renderTray();
+</script>
+</body>
+</html>

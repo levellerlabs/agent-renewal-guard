@@ -26,7 +26,7 @@ do not want a voice agent holding your wallet. This server gives the agent eyes
   - `list_upcoming_renewals` (read-only): renewals inside a decision window with
     monthly-cost facts, utilisation signals and days-until-renewal.
   - `get_renewal_detail` (read-only): one renewal, full record including cost history.
-  - `propose_decision` (proposals): record a recommend/dromote/cancel/keep suggestion
+  - `propose_decision` (proposals): record a recommend/downgrade/cancel/keep suggestion
     with reasons. Writes to `state/proposals.json` ONLY. Nothing here touches a bank.
   - `list_proposals` (read-only): the pending human-approval tray, so a companion skill
     can speak them back and the human can approve/reject from the Alexa app.
@@ -62,13 +62,35 @@ curl -s http://localhost:8787/mcp -H 'Content-Type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"curl","version":"0"}}}'
 ```
 
-Then list tools:
+## Simulated Alexa+ console (the human-in-the-loop demo)
+
+`console.py` is a two-pane web console that demonstrates the whole loop against the
+live server - no simulated responses, every click is a real MCP client call:
+
+- **Left pane - voice briefing.** A scripted voice agent initialises as an MCP client,
+  lists tools, and runs the morning briefing: what renews soon, what it costs, what the
+  usage signals say, and a recommendation per renewal filed via `propose_decision`.
+  This client is configured **least-privilege**: it holds only the four advising tools.
+  A "try to approve" button shows the guardrail - the agent attempts
+  `record_decision` and is refused because that tool was never granted to it.
+- **Right pane - approval tray.** The human surface. Pending proposals render as cards
+  with reasons and annual impact; Approve/Reject drive `record_decision` through a
+  separate MCP client that is the ONLY one holding that tool. Approving a
+  cancel/switch updates the ledger so the renewal leaves future decision windows.
 
 ```bash
-curl -s http://localhost:8787/mcp -H 'Content-Type: application/json' \
-  -H 'Accept: application/json, text/event-stream' \
-  -H 'Mcp-Session-Id: <from initialize response>' \
-  -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
+pip install starlette uvicorn        # alongside mcp
+python console.py                    # http://localhost:8788
+```
+
+Run both servers, open http://localhost:8788 and click "Run morning briefing".
+
+### Tests
+
+```bash
+python test_e2e.py         # protocol + tool-level suite (17 checks) against the server
+python test_console_e2e.py # full loop over HTTP: briefing -> guardrail -> approve/reject (23 checks)
+python test_console_ui.py  # Playwright: real browser, real clicks through the whole loop (16 checks)
 ```
 
 ## State files
