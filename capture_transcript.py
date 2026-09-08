@@ -80,9 +80,10 @@ class RenewalsBackup:
     def __exit__(self, *a):
         import shutil
         shutil.move(str(self.tmp), str(self.src))
-        # renewals.json back to tracked content; proposals cleared for next demo
+        # full restore: renewals.json from the backup, both files from git so the
+        # tracked demo state is pristine for the next run/commit
         import subprocess
-        subprocess.run(["git", "checkout", "--", "state/renewals.json"], cwd=HERE, capture_output=True)
+        subprocess.run(["git", "checkout", "--", "state/"], cwd=HERE, capture_output=True)
 
 
 def capture():
